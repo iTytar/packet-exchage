@@ -8,15 +8,23 @@ ADD . /work
 WORKDIR /work
 
 RUN mvn clean install
-#RUN cp -v /work/packet-service/target/packet-service-*-*.jar /work/packet-service/target/packet-service.jar
+RUN mkdir -vp /app/home\
+ && chmod -v a+rwx /app/home
+
+RUN cp -v /work/packet-service/target/packet-service-*-*.jar /app/packet-service.jar\
+ && chmod -v +x /app/packet-service.jar # +x to run with jre-alpine in the future
 
 FROM openjdk:11
-#FROM openjdk:8
-# todo: cannot run on jre8, while compiled with jdk 11: https://github.com/spring-projects/spring-framework/issues/17242
+#FROM openjdk:8 # openjdk:8-jre-alpine
+# todo: (APP bug) cannot run on jre8, while compiled with jdk 11:
+#       reference: https://github.com/spring-projects/spring-framework/issues/17242
 
+COPY --from=builder /app /app/
 
-COPY --from=builder /work/packet-service/target/packet-service-0.0.1-SNAPSHOT.jar /
-CMD [ "java", "-jar", "/packet-service-0.0.1-SNAPSHOT.jar" ]
+VOLUME [ "/app/home" ]
+CMD [ "java", "-Dexchange.fs.home=/app/home", "-jar", "/app/packet-service.jar" ]
+
+# Howto docker
 
 # build: docker build . -t tyt/packet-exchange:latest
 # run:   docker run -it --rm --env spring.profiles.active=DZTZ -p 8081-8082:8081-8082 tyt/packet-exchange:latest
